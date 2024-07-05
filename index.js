@@ -1,157 +1,159 @@
-require("dotenv").config();
-const express = require("express");
+const express = require('express');
+const bodyParser = require('body-parser');
+const inside = require('point-in-polygon');
 const cors = require("cors");
-const mongoose = require("mongoose");
-const path = require('path');
-const authRoutes = require("./routes/auth.js");
-const morgan = require("morgan");
-const socketIO = require('socket.io');
+
 const app = express();
-const http = require('http');
-const CryptoJS = require("crypto-js");
-const { fetchPosts, sendFreebieForecast } = require("./helpers/scheduler.js");
-const rateLimit = require('./middleware/rateLimit');
+const port = 3000;
 
-const server = http.createServer(app);
+// Ann Arbor boundary
+const annArborBoundary = {
+    north: 42.350,
+    south: 42.230,
+    east: -83.650,
+    west: -83.800
+};
 
-const io = socketIO(server);
+// Central Campus boundary
+const centralCampusBoundary = {
+    north: 42.280,
+    south: 42.270,
+    east: -83.735,
+    west: -83.750
+  };
+  
+  // North Campus boundary
+  const northCampusBoundary = {
+    north: 42.300,
+    south: 42.290,
+    east: -83.710,
+    west: -83.720
+  };
 
-io.on('connection', (socket) => {
-  console.log(`Socket ${socket.id} has connected`);
+const centralCampusPolygon = [
+    [
+        -83.74352615586291,
+        42.28785551765736
+      ],
+      [
+        -83.76763529438612,
+        42.273813584406184
+      ],
+      [
+        -83.73266424295376,
+        42.255242205573666
+      ],
+      [
+        -83.69994534844825,
+        42.256341885522744
+      ],
+      [
+        -83.70057835288658,
+        42.27755514534695
+      ],
+      [
+        -83.74352615586291,
+        42.28785551765736
+      ]
+]
 
-  socket.on('disconnect', () => { 
-    console.log("disconnected");
-  });
-
-  socket.on('error', function (err) {
-    console.log(err);
-  });
-
-});
-
-mongoose
-  .connect(process.env.DATABASE)
-  .then(() => {
-    console.log("DB connected");
-    // schedulers
-    fetchPosts(true);
-    //sendFreebieForecast()
-
-    // Start the server after successful database connection
-    server.listen(8000, () => console.log("Server running on port 8000"));
-  })
-  .catch((err) => {
-    console.log("DB CONNECTION ERROR: ", err);
-    // Stop the server if there's an error connecting to the database
-    process.exit(1);
-  });
-
-// Middlewares
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-app.use(helmet());
+const northCampusPolygon = [
+    [
+        -83.74321323974648,
+        42.287953426852056
+      ],
+      [
+        -83.70050269923767,
+        42.27755083313218
+      ],
+      [
+        -83.68755847837234,
+        42.2792539024895
+      ],
+      [
+        -83.69388666285585,
+        42.30439265689532
+      ],
+      [
+        -83.72572885651279,
+        42.30498086248511
+      ],
+      [
+        -83.74321323974648,
+        42.287953426852056
+      ]
+]
+  
 app.use(cors());
-app.use(compression());
-app.use(morgan("dev"));
+// Middleware to parse JSON bodies
+app.use(bodyParser.json());
 
-app.use(rateLimit);
+// Helper function to check if coordinates are within a given boundary
+const isWithinBoundary = (lat, lng, boundary) => {
+    return (
+      lat <= boundary.north &&
+      lat >= boundary.south &&
+      lng <= boundary.east &&
+      lng >= boundary.west
+    );
+  };
 
-const secretKey = process.env.SECRET_KEY;
-
-app.use((req, res, next) => {
-  // decrypt body
-
-  if (req.body && req.body.iv && req.body.data) {
-    const iv = req.body.iv
-    const encryptedData = req.body.data;
-    console.log('request', encryptedData)
-    try {
-      let keys = CryptoJS.enc.Utf8.parse(secretKey);
-      let base64 = CryptoJS.enc.Base64.parse(encryptedData);
-      let src = CryptoJS.enc.Base64.stringify(base64);
-      let decrypt = CryptoJS.AES.decrypt(src, keys, {
-        iv: CryptoJS.enc.Utf8.parse(iv),
-        mode: CryptoJS.mode.ECB,
-        padding: CryptoJS.pad.Pkcs7,
-      });
-      let data = decrypt.toString(CryptoJS.enc.Utf8);
-      req.body = JSON.parse(data);
-      next();
-    } catch (error) {
-      console.error('Decryption error:', error);
-      return res.status(500).json({ error: 'Decryption failed' });
-    }
-  } else {
-    console.log('Skipping')
-    next();
-  }
-
-  const encryptedResponse = (body) => {
-    console.log('encryptedResponse', body)
-    let orig = body;
-    try {
-      body = JSON.parse(body);
-    }catch (err) {
-      body = orig;
-    }
-
-    if (typeof body === 'object' && (!body.iv || !body.data)) {
-      try {
-        const responseBody = JSON.stringify(body);
-        const iv = CryptoJS.lib.WordArray.random(64);
-
-        const parsedkey = CryptoJS.enc.Utf8.parse(secretKey);
-        const encrypted = CryptoJS.AES.encrypt(responseBody, parsedkey, {
-          iv: iv,
-          mode: CryptoJS.mode.ECB,
-          padding: CryptoJS.pad.Pkcs7,
-        });
-
-        return {
-          data: encrypted.toString(),
-          iv: iv.toString(),
-        };        
-      } catch (error) {
-        return body
-      }
+// Function to determine the campus
+/*const determineCampus = (lat, lng) => {
+    if (isWithinBoundary(lat, lng, centralCampusBoundary)) {
+      return "Central Campus";
+    } else if (isWithinBoundary(lat, lng, northCampusBoundary)) {
+      return "North Campus";
     } else {
-      return body
+      return "Not in Central or North Campus";
+    }
+  };*/
+
+// Function to determine the campus
+const determineCampus = (lat, lng) => {
+    const point = [lng, lat];
+    if (inside(point, centralCampusPolygon)) {
+      return "Central Campus";
+    } else if (inside(point, northCampusPolygon)) {
+      return "North Campus";
+    } else {
+      return "Not in Central or North Campus";
     }
   };
 
-  res.json = function (body) {
-    // if request url is /media skip encryption
-    // if (req.url.includes('/media')) {
-    //   return originalJson.call(res, body);
-    // }
-    res.setHeader('Content-Type', 'application/json');
-    let data = body;
-    if(req.originalUrl.includes('/ipa') && !data.data && !data.iv){
-      data = encryptedResponse(body);
+// GET endpoint
+app.get('/api/data', (req, res) => {
+    const { lat, lng } = req.query;
+  
+    if (!lat || !lng) {
+      return res.status(400).json({ message: 'Latitude and longitude are required' });
     }
-    res.write(typeof data == "string" ? data : JSON.stringify(data));
-    res.end();
-  }
-  res.send = function (body) {
-    res.setHeader('Content-Type', 'application/json');
-    let data = body;
-    if(req.originalUrl.includes('/ipa')){
-      data = encryptedResponse(body);
+  
+    const latitude = parseFloat(lat);
+    const longitude = parseFloat(lng);
+  
+    if (isNaN(latitude) || isNaN(longitude)) {
+      return res.status(400).json({ message: 'Invalid latitude or longitude' });
     }
-    res.write(typeof data == "string" ? data : JSON.stringify(data));
-    res.end();
-  }
+  
+    const isWithin = isWithinBoundary(latitude, longitude, annArborBoundary);
+    const campus = determineCampus(latitude, longitude);
+    
+    
+    res.json({ 
+      latitude, 
+      longitude, 
+      isWithinAnnArbor: isWithin,
+      campus
+    });
+  });
+
+// POST endpoint
+app.post('/api/data', (req, res) => {
+  const data = req.body;
+  res.json({ message: 'POST request received', receivedData: data });
 });
-// Route middlewares
-app.use("/api", authRoutes);  //without encryption
-app.use('/ipa', authRoutes); // with encryption
-// Error handling middleware
-app.use((err, req, res, next) => {
-  console.error("An error occurred:", err);
-  res.status(500).json({ error: "Internal Server Error" });
+
+app.listen(port, () => {
+  console.log(`Server is running on http://localhost:${port}`);
 });
-
-app.use("/media", express.static(path.join(__dirname, "public")));
-
-
-global.ioInstance = io;
