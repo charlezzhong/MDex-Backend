@@ -12,6 +12,11 @@ const CryptoJS = require("crypto-js");
 const { fetchPosts, sendFreebieForecast } = require("./helpers/scheduler.js");
 const rateLimit = require('./middleware/rateLimit');
 
+
+const transactionRouter = require('./routes/organization.js');
+//const userRouter = require('./routes/userRouter');
+
+
 const server = http.createServer(app);
 
 const io = socketIO(server);
@@ -145,6 +150,8 @@ app.use((req, res, next) => {
 // Route middlewares
 app.use("/api", authRoutes);  //without encryption
 app.use('/ipa', authRoutes); // with encryption
+
+
 // Error handling middleware
 app.use((err, req, res, next) => {
   console.error("An error occurred:", err);

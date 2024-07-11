@@ -133,10 +133,13 @@ router.post('/admin/sendNotification', adminMiddleware, sendNotification);
 
 
 // Organization routes
+const organizationRouter = require('./organization');
+router.use('/organization', organizationRouter);
+/*
 router.post('/organization/getOrganization', getOrganizationByEmail);
 router.post('/organization/create',upload.single('orgLogo'), createOrganization);
 router.patch('/organization/update/:orgId', upload.array('media',6), updateOrganization);
-router.get('/organization/analytics/:orgId', getAnalytics);
+router.get('/organization/analytics/:orgId', getAnalytics);*/
 
 // Staff Routes
 router.post('/staffMember', createStaff);

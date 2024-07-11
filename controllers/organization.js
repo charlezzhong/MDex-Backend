@@ -238,3 +238,59 @@ exports.getAnalytics = async (req, res) => {
     return response(500, msg, error, res);
   }
 };
+
+// Create a Stripe price object and create a ticketing post
+exports.createTicketing =  async (req, res) => {
+  const { organizationId, title, description, ticketPrice, currency } = req.body;
+
+  try {
+    const organization = await Organization.findById(organizationId);
+    const stripeAccountId = organization.stripeAccountId;
+
+    // Create a price object in Stripe
+    const price = await stripe.prices.create({
+      unit_amount: ticketPrice * 100, // amount in cents
+      currency: currency || 'usd',
+      product_data: {
+        name: title,
+        description,
+      },
+      transfer_data: {
+        destination: stripeAccountId,
+      },
+    });
+
+    // Create a new post in your database with the price ID
+    const post = new Post({
+      organizationId,
+      title,
+      description,
+      ticketPrice,
+      currency: currency || 'usd',
+      stripePriceId: price.id, // Store the Stripe price ID
+    });
+
+    await post.save();
+
+    res.status(201).json({ message: 'Post created successfully', post });
+  } catch (error) {
+    console.error('Error creating post:', error);
+    res.status(500).json({ error: 'Failed to create post' });
+  }
+};
+
+
+// Create an RSVP post
+exports.createRSVP =  async (req, res) => {
+  // TODO
+};
+
+// Get all the posts this organization has created
+exports.getPosts = async (req, res) => {
+  // TODO
+};
+
+// For a specific ticket, get all the users who have purchased it
+exports.getUserTickets = async (req, res) => {
+  // TODO
+};
