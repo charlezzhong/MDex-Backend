@@ -3,11 +3,9 @@ const bodyParser = require('body-parser');
 const cors = require("cors");
 const dotenv = require('dotenv');
 const mongoose = require('mongoose');
-//models
-const Organization = require("./models/organization");
+const app = require('./app');
 
 
-const app = express();
 const port = 3000;
 
 
@@ -105,21 +103,6 @@ const northCampusPolygon = [
 app.use(cors());
 // Middleware to parse JSON bodies
 app.use(bodyParser.json());
-
-// GET endpoint
-
-
-// POST endpoint to handle incoming data and save to the database
-app.post('/api/data', async (req, res) => {
-    const data = req.body;
-    try {
-      const organization = new Organization(data);
-      const savedOrganization = await organization.save();
-      res.status(201).json({ message: 'Organization created successfully', organization: savedOrganization });
-    } catch (error) {
-      res.status(400).json({ message: 'Error creating organization', error });
-    }
-  });
 
 app.listen(port, () => {
   console.log(`Server is running on http://localhost:${port}`);

@@ -6,6 +6,11 @@ const organizationController = require('../controllers/organization')
 
 // TODO: Refactor definition of "upload" function
 
+router
+    .route('/createOrganization')
+    .post(organizationController.createOrganization1);
+
+/*
 // Organization tries to setup their card info
 router
     .route('/setup-card')
@@ -47,6 +52,6 @@ router
 
 router
     .route('/analytics/:orgId')
-    .get(organizationController.getAnalytics);
+    .get(organizationController.getAnalytics);*/
 
 module.exports = router;

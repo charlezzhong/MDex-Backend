@@ -90,7 +90,8 @@ const postFeedSchema = new Schema(
       default: 'Regular'
     },
     ticketing:{
-
+      type: String,
+      required: false
     },
     campus: {
       type: String,

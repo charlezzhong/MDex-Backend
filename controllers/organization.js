@@ -6,7 +6,7 @@ const Organization = require("../models/organization");
 const Staff = require("../models/staff");
 const Address = require("../models/address");
 const Institution = require("../models/institution");
-const postFeed = require("../models/postFeed");
+//const PostFeed = require("../models/postFeed");
 const userPosts = require("../models/userPosts");
 const Office = require("../models/office");
 
@@ -84,10 +84,10 @@ exports.createOrganization = async (req, res) => {
   if (!email) missingFields.push("Email");
   if (!orgName) missingFields.push("Name");
   if (!orgAddress) missingFields.push("Address");
-  if (!orgOfficeRoomNumber) missingFields.push("Office Room Number");
-  if (!orgOfficeOfficeBuilding) missingFields.push("Office Building");
-  if (!orgWebsite) missingFields.push("Website");
-  if (!jobTitle) missingFields.push("Job Title");
+  //if (!orgOfficeRoomNumber) missingFields.push("Office Room Number");
+  //if (!orgOfficeOfficeBuilding) missingFields.push("Office Building");
+  //if (!orgWebsite) missingFields.push("Website");
+  //if (!jobTitle) missingFields.push("Job Title");
 
   if (missingFields.length > 0) {
     const errorMessage =
@@ -216,7 +216,7 @@ exports.updateOrganization = async (req, res) => {
   }
 };
 
-exports.getAnalytics = async (req, res) => {
+/*exports.getAnalytics = async (req, res) => {
   const { orgId } = req.params;
 
   try {
@@ -225,7 +225,7 @@ exports.getAnalytics = async (req, res) => {
       totalSaves: 0,
       inReviewPosts: 0,
     };
-    let posts = await postFeed.find({ organization: orgId });
+    let posts = await PostFeed.find({ organization: orgId });
     if (posts.length) {
       let ids = posts.map((post) => post._id);
       let totalSaves = await userPosts.find({ postId: { $in: ids } }).count();
@@ -237,7 +237,7 @@ exports.getAnalytics = async (req, res) => {
     let msg = error?.message || "Something went wrong";
     return response(500, msg, error, res);
   }
-};
+};*/
 
 // Create a Stripe price object and create a ticketing post
 exports.createTicketing =  async (req, res) => {
@@ -294,3 +294,27 @@ exports.getPosts = async (req, res) => {
 exports.getUserTickets = async (req, res) => {
   // TODO
 };
+
+exports.createOrganization1 = async (req, res) => {
+  const data = req.body;
+  try {
+    const organization = new Organization(data);
+    const savedOrganization = await organization.save();
+    res.status(201).json({ message: 'Organization created successfully', organization: savedOrganization });
+  } catch (error) {
+    res.status(400).json({ message: 'Error creating organization', error });
+  }
+};
+
+
+
+/*app.post('/api/', async (req, res) => {
+  const data = req.body;
+  try {
+    const organization = new Organization(data);
+    const savedOrganization = await organization.save();
+    res.status(201).json({ message: 'Organization created successfully', organization: savedOrganization });
+  } catch (error) {
+    res.status(400).json({ message: 'Error creating organization', error });
+  }
+});*/
