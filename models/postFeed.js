@@ -79,8 +79,18 @@ const postFeedSchema = new Schema(
       type: Schema.Types.ObjectId,
       ref: 'User',
     },
+    // Freebie Category
     category: {
       type: String,
+    },
+    // Event Type (Whether it is RSVP, Ticketing, or Regular)
+    eventType:{
+      type: String,
+      enum : ['RSVP', 'Ticketing', 'Regular'],
+      default: 'Regular'
+    },
+    ticketing:{
+
     },
     campus: {
       type: String,

@@ -68,6 +68,10 @@ const orgSchema = new Schema(
         type: Date,
       }
     },
+    stripeAccountId: {
+      type: String,
+      required: false
+    },
     totalPost: {
       type: Number,
       default: 0,

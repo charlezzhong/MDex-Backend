@@ -48,7 +48,12 @@ const userSchema = new Schema(
     ],
     token: {
       type: String,
-    }
+    },
+    // depends on the functionality how user manage their card info
+    stripeCustomerId: { 
+      type: String,
+      required: false
+    }, 
   },
   { timestamps: true }
 );
