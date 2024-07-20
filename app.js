@@ -5,6 +5,11 @@ const cors = require('cors');
 
 const orgRouter = require('./routes/organization');
 const testRouter = require('./routes/test');
+const feedbackRouter = require('./routes/feedbackRouter');
+const postRouter = require('./routes/postRouter');
+const userRouter = require('./routes/userRouter');
+const adminRouter = require('./routes/adminRouter');
+
 
 
 // Use middleware
@@ -20,7 +25,7 @@ app.use(cors({
     credentials: true // Optional, but set to true if you need to support credentials
 }));
 
-app.use('/ipa', testRouter);
+//app.use('/ipa', testRouter);
 
 //app.use('/api/v1/organization', orgRouter);
 // POST endpoint to handle incoming data and save to the database
@@ -34,5 +39,16 @@ app.use('/ipa', testRouter);
       res.status(400).json({ message: 'Error creating organization', error });
     }
   });*/
+
+  app.use('/ipa/v2/testing', testRouter);
+
+  app.use('/ipa/v2/organization', orgRouter);
+  app.use('/ipa/v2/feedbackFeed', feedbackRouter);
+  app.use('/ipa/v2/postFeed', postRouter);
+  app.use('/ipa/v2/user', userRouter);
+  app.use('/ipa/v2/admin', adminRouter);
+  //app.use('/ipa/v2/postFeed', orgRouter);
+  //app.use('/ipa/v2/postFeed', orgRouter);
+  //app.use('/ipa/v2/postFeed', orgRouter);
 
 module.exports = app;

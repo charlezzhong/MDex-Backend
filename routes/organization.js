@@ -5,12 +5,12 @@ const transactionController = require('../controllers/transactionController')
 const organizationController = require('../controllers/organization')
 
 // TODO: Refactor definition of "upload" function
-/*
+
 router
     .route('/createOrganization')
-    .post(organizationController.createOrganization1);
+    .post(organizationController.createOrganization);
 
-
+/*
 // Organization tries to setup their card info
 router
     .route('/setup-card')
@@ -70,6 +70,6 @@ router
 // Refactor to user route later!!!
 router.route('/user/UserGetPurchased').get(organizationController.getPurchased);
 router.route('/user/UserGetRSVP').get(organizationController.getRSVP);
+*/
 
-
-module.exports = router;*/
+module.exports = router;
