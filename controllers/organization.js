@@ -6,9 +6,10 @@ const Organization = require("../models/organization");
 const Staff = require("../models/staff");
 const Address = require("../models/address");
 const Institution = require("../models/institution");
-//const PostFeed = require("../models/postFeed");
+const PostFeed = require("../models/postFeed");
 const userPosts = require("../models/userPosts");
 const Office = require("../models/office");
+
 
 /*
     @Route GET : Fetch organization by email
@@ -155,7 +156,7 @@ exports.createOrganization = async (req, res) => {
     return response(500, err?._message || "Internal Server Error", null, res);
   }
 };
-
+/*
 exports.updateOrganization = async (req, res) => {
   let body = req.body;
   const { orgId } = req.params;
@@ -216,7 +217,7 @@ exports.updateOrganization = async (req, res) => {
   }
 };
 
-/*exports.getAnalytics = async (req, res) => {
+exports.getAnalytics = async (req, res) => {
   const { orgId } = req.params;
 
   try {
@@ -237,7 +238,7 @@ exports.updateOrganization = async (req, res) => {
     let msg = error?.message || "Something went wrong";
     return response(500, msg, error, res);
   }
-};*/
+};
 
 // Create a Stripe price object and create a ticketing post
 exports.createTicketing =  async (req, res) => {
@@ -279,20 +280,152 @@ exports.createTicketing =  async (req, res) => {
   }
 };
 
+exports.createTicketing = async (req, res) => {
+  const { title, description, date, ticketInfo, organizationId, eventLocation, eventLocationDescription, eventDate, eventTime, eventEndTime, image, postedBy, category, campus } = req.body;
+
+  try {
+    // Create ticketing details
+    const ticketing = new Ticketing({
+      price: ticketInfo.price,
+      currency: ticketInfo.currency,
+      stripeProductId: ticketInfo.stripeProductId,
+      stripePriceId: ticketInfo.stripePriceId,
+      availableTickets: ticketInfo.availableTickets,
+      event: null, // Will be updated after creating the event
+    });
+
+    // Create new event
+    const newEvent = new PostFeed({
+      title,
+      description,
+      eventDate,
+      eventTime,
+      eventEndTime,
+      eventLocation,
+      eventLocationDescription,
+      image,
+      postedBy,
+      category,
+      campus,
+      eventType: 'Ticketing',
+      ticketing: ticketing._id, // Reference to the ticketing document
+      organization: organizationId
+    });
+
+    // Save event to the database
+    const savedEvent = await newEvent.save();
+
+    // Update ticketing with the event ID
+    ticketing.event = savedEvent._id;
+    await ticketing.save();
+
+    res.status(201).json({ message: 'Ticketing event created successfully', event: savedEvent });
+  } catch (error) {
+    console.error('Error creating ticketing event:', error);
+    res.status(500).json({ message: 'Server error', error });
+  }
+}
+
 
 // Create an RSVP post
 exports.createRSVP =  async (req, res) => {
   // TODO
+  const { title, description, eventDate, eventTime, eventEndTime, eventLocation, eventLocationDescription, image, postedBy, category, campus, rsvpLink, maxAttendees, organizationId } = req.body;
+
+  try {
+    // Create RSVP details
+    const rsvp = new Rsvp({
+      rsvpLink,
+      maxAttendees,
+      currentAttendees: 0,
+      event: null, // Will be updated after creating the event
+    });
+
+    // Create new event
+    const newEvent = new PostFeed({
+      title,
+      description,
+      eventDate,
+      eventTime,
+      eventEndTime,
+      eventLocation,
+      eventLocationDescription,
+      image,
+      postedBy,
+      category,
+      campus,
+      eventType: 'RSVP',
+      rsvp: rsvp._id, // Reference to the RSVP document
+      organization: organizationId
+    });
+
+    // Save event to the database
+    const savedEvent = await newEvent.save();
+
+    // Update RSVP with the event ID
+    rsvp.event = savedEvent._id;
+    await rsvp.save();
+
+    res.status(201).json({ message: 'RSVP event created successfully', event: savedEvent });
+  } catch (error) {
+    console.error('Error creating RSVP event:', error);
+    res.status(500).json({ message: 'Server error', error });
+  }
 };
 
 // Get all the posts this organization has created
 exports.getPosts = async (req, res) => {
   // TODO
+  const organizationId = req.user._id;
+
+  try {
+    // Fetch events created by the organization
+    const events = await PostFeed.find({ createdBy: organizationId });
+
+    res.status(200).json(events);
+  } catch (error) {
+    console.error('Error fetching organization posts:', error);
+    res.status(500).json({ message: 'Server error', error });
+  }
 };
 
 // For a specific ticket, get all the users who have purchased it
 exports.getUserTickets = async (req, res) => {
   // TODO
+  const { eventId } = req.query;
+  const organizationId = req.user._id;
+
+  try {
+    // Verify if the event belongs to the organization
+    const event = await Event.findOne({ _id: eventId, createdBy: organizationId });
+
+    if (!event) {
+      return res.status(404).json({ message: 'Event not found or not authorized' });
+    }
+
+    // Fetch ticket purchases for the event
+    const ticketPurchases = await TicketPurchase.find({ eventId })
+      .populate('userId', 'name email'); // Populating user details
+
+    res.status(200).json(ticketPurchases);
+  } catch (error) {
+    console.error('Error fetching ticket purchases:', error);
+    res.status(500).json({ message: 'Server error', error });
+  }
+};
+
+exports.getUserRSVPs = async (req, res) => {
+  const { eventId } = req.query; // Assuming eventId is passed as a query parameter
+
+  try {
+    // Find all RSVP entries for the specific event
+    const rsvps = await RSVP.find({ eventId }).populate('userId', 'name email'); // Adjust as per your schema fields
+
+    res.status(200).json(rsvps);
+  } catch (error) {
+    console.error('Error fetching RSVPs:', error);
+    res.status(500).json({ message: 'Server error', error });
+  }
 };
 
 exports.createOrganization1 = async (req, res) => {
@@ -305,6 +438,37 @@ exports.createOrganization1 = async (req, res) => {
     res.status(400).json({ message: 'Error creating organization', error });
   }
 };
+
+// Refactor to user later
+exports.UserGetPurchased = async (req, res) => {
+  const userId = req.user.id; // Assuming req.user is set after authentication
+
+  try {
+    // Find all ticket purchases by the user
+    const purchases = await TicketPurchase.find({ userId }).populate('eventId');
+
+    res.status(200).json(purchases);
+  } catch (error) {
+    console.error('Error fetching purchased tickets:', error);
+    res.status(500).json({ message: 'Server error', error });
+  }
+}
+
+// Refactor to user later
+exports.UserGetRSVP = async (req, res) => {
+  const userId = req.user.id; // Assuming req.user is set after authentication
+
+  try {
+    // Find all RSVP events by the user
+    const rsvpEvents = await RSVP.find({ userId }).populate('event');
+
+    res.status(200).json(rsvpEvents);
+  } catch (error) {
+    console.error('Error fetching RSVP events:', error);
+    res.status(500).json({ message: 'Server error', error });
+  }
+}
+*/
 
 
 

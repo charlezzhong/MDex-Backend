@@ -89,9 +89,10 @@ const postFeedSchema = new Schema(
       enum : ['RSVP', 'Ticketing', 'Regular'],
       default: 'Regular'
     },
-    ticketing:{
-      type: String,
-      required: false
+    ticketing: { 
+      type: Schema.Types.ObjectId, 
+      ref: 'Ticketing', 
+      required: false 
     },
     campus: {
       type: String,

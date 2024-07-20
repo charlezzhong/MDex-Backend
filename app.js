@@ -4,6 +4,7 @@ const app = express();
 const cors = require('cors');
 
 const orgRouter = require('./routes/organization');
+const testRouter = require('./routes/test');
 
 
 // Use middleware
@@ -19,7 +20,9 @@ app.use(cors({
     credentials: true // Optional, but set to true if you need to support credentials
 }));
 
-app.use('/api/v1/organization', orgRouter);
+app.use('/ipa', testRouter);
+
+//app.use('/api/v1/organization', orgRouter);
 // POST endpoint to handle incoming data and save to the database
 /*app.post('/api/', async (req, res) => {
     const data = req.body;
