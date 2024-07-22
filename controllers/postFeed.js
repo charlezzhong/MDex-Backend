@@ -45,7 +45,9 @@ exports.createPost = async (req, res) => {
       // eligible,
       organization,
       // rsvp data if exists
-      rsvpData
+      rsvpData,
+      lat,
+      lng
     } = req.body;
 
     console.log(req.body);
@@ -62,6 +64,8 @@ exports.createPost = async (req, res) => {
       eventTime,
       eventLocation,
       eventLocationDescription,
+      lat,
+      lng,
       postedBy: userId,
       category,
       link,
