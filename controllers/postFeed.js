@@ -48,6 +48,8 @@ exports.createPost = async (req, res) => {
       rsvpData
     } = req.body;
 
+    console.log(req.body);
+
     const post = await new PostFeed({
       title,
       body,
@@ -92,7 +94,7 @@ exports.createPost = async (req, res) => {
 
     await post.save();
 
-    global.ioInstance.emit("newPostAlertForAdmin", {
+    /*global.ioInstance.emit("newPostAlertForAdmin", {
       message: "New post created",
     });
 
@@ -100,10 +102,10 @@ exports.createPost = async (req, res) => {
       'hello@thisismdex.com',
       'New MDex Post',
       `A new post has been submitted to the admin panel`,
-    );
+    );*/
 
     // get and set notification for this post
-    fetchPosts()
+    //fetchPosts()
 
     res.json(post);
   } catch (err) {
@@ -620,6 +622,8 @@ exports.getPostsByUser = async (req, res) => {
 };
 exports.getPostsByOrganization = async (req, res) => {
   try {
+    console.log('req.params: ', req.params);
+    console.log('req.query: ', req.query);
     const { orgId } = req.params;
     const { category, offset = 0, limit = 10 } = req.query; // Assuming the parameter is named "category"
 
@@ -636,6 +640,49 @@ exports.getPostsByOrganization = async (req, res) => {
   } catch (err) {
     console.log(err);
 
+    return res.status(500).json({
+      status: false,
+      message: err.message,
+    });
+  }
+};
+
+exports.getTotalPostsByOrganization = async (req, res) => {
+  try {
+    console.log('req.params: ', req.params);
+    const { orgId } = req.params;
+
+    // get the total number of posts for this org
+    const totalPosts = await PostFeed.countDocuments({ organization: orgId });
+
+    // get all the posts posted by this org
+    const organizationPosts = await PostFeed.find({ organization: orgId });
+
+    // Extract the IDs of these posts
+    const postIds = organizationPosts.map(post => post._id);
+
+    // Count the total number of saves for these posts
+    const totalSaves = await userPosts.countDocuments({ postId: { $in: postIds } });
+
+    res.json({ totalPosts, totalSaves });
+  } catch (err) {
+    console.log(err);
+
+    return res.status(500).json({
+      status: false,
+      message: err.message,
+    });
+  }
+};
+
+exports.getPostSaves = async (req, res) => {
+  try {
+    const { postId } = req.params;
+    const totalSaves = await userPosts.countDocuments({ postId });
+
+    res.json({ totalSaves });
+  } catch (err) {
+    console.log(err);
     return res.status(500).json({
       status: false,
       message: err.message,

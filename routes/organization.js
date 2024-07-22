@@ -8,7 +8,7 @@ const organizationController = require('../controllers/organization')
 
 router
     .route('/createOrganization')
-    .post(organizationController.createOrganization);
+    .post(organizationController.createOrganization1);
 
 /*
 // Organization tries to setup their card info

@@ -1,7 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const stripe = require('stripe')('sk_test_51PeIpp2MY7TItQOFS45S6SARIfb8DAfKig9m3iTZfqjHlUkGcwwm9hfe8FSlr6vtq0coGTVTymPhpTkttTjq4M9t00p9YVMxOM');
-const Organization = require('../models/organization');
+//const Organization = require('../models/organization');
+const { getOrganizationByEmail, createOrganization, updateOrganization, getAnalytics } = require('../controllers/organization');
+const {createPost, getPostSaves, getPostsWithPagination, getPostsByUser, getSinglePost, deletePost, updatePost, exploreScreen, getFilteredPost, getPostsByOrganization, getTotalPostsByOrganization} = require("../controllers/postFeed");
 
 // Create a Stripe account for the organization
 router.post('/create-stripe-account', async (req, res) => {
@@ -55,4 +57,23 @@ router.post('/setup-payment-method', async (req, res) => {
   }
 });
 
+
+/*router.post('/postFeed', async (req, res) => {
+  try {
+    console.log("received");
+    console.log('Request:', req);
+    res.status(200).json({ success: true});
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ success: false, message: 'Failed to create Stripe account' });
+  }
+});*/
+router.post('/postFeed', createPost);
+//router.post('/postFeed/summary', getPostsByOrganization);
+router.get('/getNum/:orgId', getTotalPostsByOrganization);
+router.get('/org/postFeed/:orgId', getPostsByOrganization);
+router.get('/post/:postId/saves', getPostSaves);
+router.get('/postFeed/:postId', getSinglePost);
+
 module.exports = router;
+

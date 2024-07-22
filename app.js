@@ -10,8 +10,6 @@ const postRouter = require('./routes/postRouter');
 const userRouter = require('./routes/userRouter');
 const adminRouter = require('./routes/adminRouter');
 
-
-
 // Use middleware
 app.use(express.json());
 //app.use(express.static(`${__dirname}/public`));

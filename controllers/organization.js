@@ -84,7 +84,7 @@ exports.createOrganization = async (req, res) => {
   const missingFields = [];
   if (!email) missingFields.push("Email");
   if (!orgName) missingFields.push("Name");
-  if (!orgAddress) missingFields.push("Address");
+  //if (!orgAddress) missingFields.push("Address");
   //if (!orgOfficeRoomNumber) missingFields.push("Office Room Number");
   //if (!orgOfficeOfficeBuilding) missingFields.push("Office Building");
   //if (!orgWebsite) missingFields.push("Website");
@@ -154,6 +154,17 @@ exports.createOrganization = async (req, res) => {
   } catch (err) {
     console.log(err);
     return response(500, err?._message || "Internal Server Error", null, res);
+  }
+};
+
+exports.createOrganization1 = async (req, res) => {
+  const data = req.body;
+  try {
+    const organization = new Organization(data);
+    const savedOrganization = await organization.save();
+    res.status(201).json({ message: 'Organization created successfully', organization: savedOrganization });
+  } catch (error) {
+    res.status(400).json({ message: 'Error creating organization', error });
   }
 };
 /*
