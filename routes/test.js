@@ -1,9 +1,31 @@
 const express = require('express');
 const router = express.Router();
-const stripe = require('stripe')('sk_test_51PeIpp2MY7TItQOFS45S6SARIfb8DAfKig9m3iTZfqjHlUkGcwwm9hfe8FSlr6vtq0coGTVTymPhpTkttTjq4M9t00p9YVMxOM');
-//const Organization = require('../models/organization');
+const stripe = require('stripe')('sk_test_51OZhCqAA6SMOc61uZ64GFdht0qyQHlLlUGghAe9e7RB8ie0pi23vRqy33x6tquiXEFN3dJHR5lHS2CLSiNzi6T7v00KV17fONy');
+const Organization = require('../models/organization');
 const { getOrganizationByEmail, createOrganization, updateOrganization, getAnalytics } = require('../controllers/organization');
 const {createPost, getPostSaves, getPostsWithPagination, getPostsByUser, getSinglePost, deletePost, updatePost, exploreScreen, getFilteredPost, getPostsByOrganization, getTotalPostsByOrganization} = require("../controllers/postFeed");
+
+
+// Helper function to get the Stripe account ID from your database
+async function getStripeAccountId(organizationId) {
+  try {
+    const organization = await Organization.findById(organizationId);
+    return organization.stripeAccountId;
+  } catch (error) {
+    console.error('Error fetching Stripe account ID:', error);
+    throw error;
+  }
+}
+
+// Helper function to save the Stripe account ID to your database
+async function saveStripeAccountId(organizationId, accountId) {
+  try {
+    await Organization.findByIdAndUpdate(organizationId, { stripeAccountId: accountId });
+  } catch (error) {
+    console.error('Error saving Stripe account ID:', error);
+    throw error;
+  }
+}
 
 // Create a Stripe account for the organization
 router.post('/create-stripe-account', async (req, res) => {
@@ -57,6 +79,41 @@ router.post('/setup-payment-method', async (req, res) => {
   }
 });
 
+router.post('/stripe/onboard', async (req, res) => {
+  console.log("testing");
+  const { organizationId } = req.body;
+
+  // Logic to fetch or create the Stripe account
+  let account = await getStripeAccountId(organizationId);
+  console.log("account: ", account);
+
+  if (!account) {
+    console.log("testing222");
+    account = await stripe.accounts.create({
+      type: 'express',
+      country: 'US', // or your organization's country
+    });
+
+    // Save the account ID to the database
+    await saveStripeAccountId(organizationId, account.id);
+  } else if (typeof account === 'string') {
+    // If account is a string (ID), convert it to an object with id property
+    account = { id: account };
+  }
+
+    
+  const accountLink = await stripe.accountLinks.create({
+    account: account.id,
+    //refresh_url: `${process.env.FRONTEND_URL}/refresh`,
+    //return_url: `${process.env.FRONTEND_URL}/return`,
+    refresh_url: 'http://localhost:3000/onboarding/refresh',
+    //return_url: 'http://localhost:3000/onboarding/return',
+    return_url: 'http://localhost:3000/dashboard/profile',
+    type: 'account_onboarding',
+  });
+
+  res.json({ url: accountLink.url });
+});
 
 /*router.post('/postFeed', async (req, res) => {
   try {
@@ -74,6 +131,7 @@ router.get('/getNum/:orgId', getTotalPostsByOrganization);
 router.get('/org/postFeed/:orgId', getPostsByOrganization);
 router.get('/post/:postId/saves', getPostSaves);
 router.get('/postFeed/:postId', getSinglePost);
+//router.post('/stripe/onboard', stripeRoutes);
 
 module.exports = router;
 
