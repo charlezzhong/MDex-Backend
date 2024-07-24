@@ -8,6 +8,10 @@ const ticketSchema = new Schema(
       ref: 'PostFeed',
       required: true,
     },
+    description: {
+      type: String,
+      required: false,
+    },
     price: {
       type: Number,
       required: true,

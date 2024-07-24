@@ -1,6 +1,12 @@
+//require('dotenv').config({ path: '.env' });
+//dotenv.config({ path: './config.env' });
+const dotenv = require('dotenv');
+dotenv.config({ path: './config.env' });
 const PostFeed = require('../models/postFeed');
 const RsvpSchema = require('../models/rsvp');
 const userPosts = require('../models/userPosts');
+const Ticket = require('../models/ticket');
+const Organization = require('../models/organization');
 
 const fs = require('fs');
 const path = require('path');
@@ -16,8 +22,360 @@ var timezone = require('dayjs/plugin/timezone');
 const userForRsvp = require('../models/userForRsvp');
 const UserRSVP = require('../models/userRSVP');
 
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 dayjs.extend(utc)
 dayjs.extend(timezone)
+
+
+exports.createTicket = async (req, res) => {
+  try {
+    let {
+      eventDate,
+      organizationName,
+      eventLocationDescription,
+      eventLocation,
+      eventTime,
+      title,
+      body,
+      image,
+      userId,
+      instagram,
+      website,
+      description,
+      category,
+      link,
+      eventEndTime,
+      isNorth,
+      isCentral,
+      organization,
+      rsvpData,
+      lat,
+      lng,
+      tickets
+    } = req.body;
+
+    console.log(req.body);
+
+    const post = await new PostFeed({
+      title,
+      body,
+      image,
+      organizationName,
+      description,
+      website,
+      instagram,
+      eventDate,
+      eventTime,
+      eventLocation,
+      eventLocationDescription,
+      lat,
+      lng,
+      postedBy: userId,
+      category,
+      link,
+      eventEndTime,
+      campus: isNorth ? 'north' : isCentral ? 'central' : 'all',
+      organization,
+      eventType: 'Ticketing'
+    }).save();
+
+    if (rsvpData) {
+      const rsvp = await RsvpSchema.create({
+        ...rsvpData,
+        post: post._id
+      });
+      await PostFeed.findByIdAndUpdate(post._id, { rsvp: rsvp._id });
+    }
+
+    let createdTickets = [];
+    if (tickets && tickets.length > 0) {
+      const org = await Organization.findById(organization);
+      const stripeAccountId = org.stripeAccountId;
+
+      const ticketDocuments = await Promise.all(tickets.map(async (ticket) => {
+        // Create a Stripe product
+        const product = await stripe.products.create(
+          {
+            //name: title,
+            name: ticket.name,
+            description: ticket.description,
+          },
+          { stripeAccount: stripeAccountId }
+        );
+        
+        // Create a Stripe price
+        const price = await stripe.prices.create(
+          {
+            unit_amount: ticket.price * 100, // price in cents
+            currency: 'usd',
+            product: product.id,
+          },
+          { stripeAccount: stripeAccountId }
+        );
+
+        return {
+          event: post._id,
+          description: ticket.description,
+          price: ticket.price,
+          availableQuantity: ticket.available,
+          stripeProductId: product.id,
+          stripePriceId: price.id,
+          organization
+        };
+      }));
+
+      //const createdTickets = await Ticket.insertMany(ticketDocuments);
+      createdTickets = await Ticket.insertMany(ticketDocuments);
+
+      const ticketIds = createdTickets.map(ticket => ticket._id);
+      await PostFeed.findByIdAndUpdate(post._id, { ticketing: ticketIds });
+    }
+
+    if (req.body.image) {
+      let folderPath = path.join(__dirname, `../public/post/${post._id}`);
+
+      fs.mkdir(folderPath, { recursive: true }, async (err) => {
+        if (err) await PostFeed.findOneAndDelete({ _id: post._id });
+      });
+
+      let fileName = image.split('/').pop();
+
+      moveFiles(folderPath, fileName);
+
+      post.image = `media/post/${post._id}/${fileName}`;
+    }
+
+    await post.save();
+
+    res.json({ post, tickets: createdTickets });
+  } catch (err) {
+    console.log(err);
+
+    return res.status(500).json({
+      status: false,
+      message: err.message,
+    });
+  }
+};
+/*exports.createTicket = async (req, res) => {
+  try {
+    let {
+      eventDate,
+      organizationName,
+      eventLocationDescription,
+      eventLocation,
+      eventTime,
+      title,
+      body,
+      image,
+      userId,
+      instagram,
+      website,
+      description,
+      category,
+      link,
+      eventEndTime,
+      isNorth,
+      isCentral,
+      organization,
+      rsvpData,
+      lat,
+      lng,
+      tickets
+    } = req.body;
+
+    console.log(req.body);
+
+    const post = await new PostFeed({
+      title,
+      body,
+      image,
+      organizationName,
+      description,
+      website,
+      instagram,
+      eventDate,
+      eventTime,
+      eventLocation,
+      eventLocationDescription,
+      lat,
+      lng,
+      postedBy: userId,
+      category,
+      link,
+      eventEndTime,
+      campus: isNorth ? 'north' : isCentral ? 'central' : 'all',
+      organization,
+      eventType: 'Ticketing'
+    }).save();
+
+    if (rsvpData) {
+      const rsvp = await RsvpSchema.create({
+        ...rsvpData,
+        post: post._id
+      });
+      await PostFeed.findByIdAndUpdate(post._id, { rsvp: rsvp._id });
+    }
+
+    const ticketDocuments = tickets.map(ticket => ({
+      event: post._id,
+      description: ticket.description,
+      price: ticket.price,
+      availableQuantity: ticket.available,
+      organization
+    }));
+
+    const createdTickets = await Ticket.insertMany(ticketDocuments);
+
+    const ticketIds = createdTickets.map(ticket => ticket._id);
+    await PostFeed.findByIdAndUpdate(post._id, { ticketing: ticketIds });
+
+    if (req.body.image) {
+      let folderPath = path.join(__dirname, `../public/post/${post._id}`);
+
+      fs.mkdir(folderPath, { recursive: true }, async (err) => {
+        if (err) await PostFeed.findOneAndDelete({ _id: post._id });
+      });
+
+      let fileName = image.split('/').pop();
+
+      moveFiles(folderPath, fileName);
+
+      post.image = `media/post/${post._id}/${fileName}`;
+    }
+
+    await post.save();
+
+    res.json({ post, tickets: createdTickets });
+  } catch (err) {
+    console.log(err);
+
+    return res.status(500).json({
+      status: false,
+      message: err.message,
+    });
+  }
+};*/
+/*exports.createTicket = async (req, res) => {
+  try {
+    let {
+      eventDate,
+      organizationName,
+      eventLocationDescription,
+      eventLocation,
+      eventTime,
+      title,
+      body,
+      image,
+      userId,
+      instagram,
+      website,
+      description,
+      category,
+      link,
+      eventEndTime,
+      isNorth,
+      isCentral,
+      organization,
+      rsvpData,
+      lat,
+      lng,
+      tickets
+    } = req.body;
+
+    console.log(req.body);
+
+    const post = await new PostFeed({
+      title,
+      body,
+      image,
+      organizationName,
+      description,
+      website,
+      instagram,
+      eventDate,
+      eventTime,
+      eventLocation,
+      eventLocationDescription,
+      lat,
+      lng,
+      postedBy: userId,
+      category,
+      link,
+      eventEndTime,
+      campus: isNorth ? 'north' : isCentral ? 'central' : 'all',
+      organization,
+      eventType: 'Ticketing'
+    }).save();
+
+    if (rsvpData) {
+      const rsvp = await RsvpSchema.create({
+        ...rsvpData,
+        post: post._id
+      });
+      await PostFeed.findByIdAndUpdate(post._id, { rsvp: rsvp._id });
+    }
+
+    if (tickets && tickets.length > 0) {
+      const ticketData = tickets[0];
+      const org = await Organization.findById(organization);
+      const stripeAccountId = org.stripeAccountId;
+
+      // Create a Stripe product
+      const product = await stripe.products.create(
+        {
+          name: title,
+          description: description,
+        },
+        { stripeAccount: stripeAccountId }
+      );
+      // Create a Stripe price
+      const price = await stripe.prices.create(
+        {
+          unit_amount: ticketData.price * 100, // price in cents
+          currency: 'usd',
+          product: product.id,
+        },
+        { stripeAccount: stripeAccountId }
+      );
+      const ticket = await new Ticket({
+        event: post._id,
+        price: ticketData.price,
+        availableQuantity: ticketData.available,
+        stripeProductId: product.id,
+        stripePriceId: price.id,
+        organization
+      }).save();
+
+      await PostFeed.findByIdAndUpdate(post._id, { ticketing: ticket._id });
+    }
+
+    if (req.body.image) {
+      let folderPath = path.join(__dirname, `../public/post/${post._id}`);
+
+      fs.mkdir(folderPath, { recursive: true }, async (err) => {
+        if (err) await PostFeed.findOneAndDelete({ _id: post._id });
+      });
+
+      let fileName = image.split('/').pop();
+
+      moveFiles(folderPath, fileName);
+
+      post.image = `media/post/${post._id}/${fileName}`;
+    }
+
+    await post.save();
+
+    res.json({ post });
+  } catch (err) {
+    console.log(err);
+
+    return res.status(500).json({
+      status: false,
+      message: err.message,
+    });
+  }
+};*/
 
 exports.createPost = async (req, res) => {
   try {

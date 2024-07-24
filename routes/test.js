@@ -1,9 +1,9 @@
 const express = require('express');
 const router = express.Router();
-const stripe = require('stripe')('sk_test_51OZhCqAA6SMOc61uZ64GFdht0qyQHlLlUGghAe9e7RB8ie0pi23vRqy33x6tquiXEFN3dJHR5lHS2CLSiNzi6T7v00KV17fONy');
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const Organization = require('../models/organization');
 const { getOrganizationByEmail, createOrganization, updateOrganization, getAnalytics } = require('../controllers/organization');
-const {createPost, getPostSaves, getPostsWithPagination, getPostsByUser, getSinglePost, deletePost, updatePost, exploreScreen, getFilteredPost, getPostsByOrganization, getTotalPostsByOrganization} = require("../controllers/postFeed");
+const {createPost, createTicket, getPostSaves, getPostsWithPagination, getPostsByUser, getSinglePost, deletePost, updatePost, exploreScreen, getFilteredPost, getPostsByOrganization, getTotalPostsByOrganization} = require("../controllers/postFeed");
 
 
 // Helper function to get the Stripe account ID from your database
@@ -115,6 +115,9 @@ router.post('/stripe/onboard', async (req, res) => {
   res.json({ url: accountLink.url });
 });
 
+
+router.post('/postFeed/ticket', createTicket);
+
 /*router.post('/postFeed', async (req, res) => {
   try {
     console.log("received");
@@ -132,6 +135,7 @@ router.get('/org/postFeed/:orgId', getPostsByOrganization);
 router.get('/post/:postId/saves', getPostSaves);
 router.get('/postFeed/:postId', getSinglePost);
 //router.post('/stripe/onboard', stripeRoutes);
-
+//router.post('/postFeed/ticket', );
+//http://localhost:5000/ipa/v2/testing/postFeed/ticket
 module.exports = router;
 
