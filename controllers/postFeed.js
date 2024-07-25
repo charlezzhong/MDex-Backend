@@ -982,7 +982,7 @@ exports.getPostsByUser = async (req, res) => {
     });
   }
 };
-exports.getPostsByOrganization = async (req, res) => {
+/*exports.getPostsByOrganization = async (req, res) => {
   try {
     console.log('req.params: ', req.params);
     console.log('req.query: ', req.query);
@@ -1002,6 +1002,57 @@ exports.getPostsByOrganization = async (req, res) => {
   } catch (err) {
     console.log(err);
 
+    return res.status(500).json({
+      status: false,
+      message: err.message,
+    });
+  }
+};*/
+
+exports.getPostsByOrganization = async (req, res) => {
+  try {
+    const { orgId } = req.params;
+    const { category, offset = 0, limit = 10 } = req.query; // Assuming the parameter is named "category"
+
+    let query = {};
+    let eventTypeQuery = {};
+
+    // Determine the query based on the category
+    switch (category) {
+      case 'upcoming':
+        query = { eventDate: { $gte: dayjs().format('MM/DD/YYYY') } }; // Fetch upcoming events
+        break;
+      case 'past':
+        query = { eventDate: { $lt: dayjs().format('MM/DD/YYYY') } }; // Fetch past events
+        break;
+      case 'upcoming_rsvp':
+        query = { eventDate: { $gte: dayjs().format('MM/DD/YYYY') }, eventType: 'Regular', rsvp: { $exists: true } }; // Upcoming RSVP events
+        break;
+      case 'past_rsvp':
+        query = { eventDate: { $lt: dayjs().format('MM/DD/YYYY') }, eventType: 'Regular', rsvp: { $exists: true } }; // Past RSVP events
+        break;
+      case 'upcoming_ticket':
+        query = { eventDate: { $gte: dayjs().format('MM/DD/YYYY') }, eventType: 'Ticketing' }; // Upcoming Ticket events
+        break;
+      case 'past_ticket':
+        query = { eventDate: { $lt: dayjs().format('MM/DD/YYYY') }, eventType: 'Ticketing' }; // Past Ticket events
+        break;
+      default:
+        return res.status(400).json({ status: false, message: 'Invalid category' });
+    }
+
+    // Query for the posts
+    const posts = await PostFeed.find({ ...query, organization: orgId })
+      .populate('organization', 'rsvp')
+      .limit(parseInt(limit))
+      .skip(parseInt(offset));
+    
+    // Total count for pagination
+    const total = await PostFeed.countDocuments({ ...query, organization: orgId });
+
+    res.json({ posts, total });
+  } catch (err) {
+    console.error(err);
     return res.status(500).json({
       status: false,
       message: err.message,

@@ -13,6 +13,14 @@ const ticketPurchaseSchema = new Schema(
       ref: 'Ticket',
       required: true,
     },
+    stripeSessionId: { 
+      type: String, 
+      required: true 
+    },
+    stripePaymentIntentId: { 
+      type: String, 
+      required: true 
+    },
     purchaseDate: {
       type: Date,
       default: Date.now,
@@ -21,9 +29,13 @@ const ticketPurchaseSchema = new Schema(
       type: Number,
       required: true,
     },
-    transactionId: {
+    qrCode: {
       type: String,
       required: true,
+    },
+    used: {
+      type: Boolean,
+      default: false,
     },
   },
   { timestamps: true },

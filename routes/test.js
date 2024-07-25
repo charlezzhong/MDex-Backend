@@ -4,6 +4,7 @@ const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const Organization = require('../models/organization');
 const { getOrganizationByEmail, createOrganization, updateOrganization, getAnalytics } = require('../controllers/organization');
 const {createPost, createTicket, getPostSaves, getPostsWithPagination, getPostsByUser, getSinglePost, deletePost, updatePost, exploreScreen, getFilteredPost, getPostsByOrganization, getTotalPostsByOrganization} = require("../controllers/postFeed");
+const { route } = require('./organization');
 
 
 // Helper function to get the Stripe account ID from your database
@@ -115,6 +116,43 @@ router.post('/stripe/onboard', async (req, res) => {
   res.json({ url: accountLink.url });
 });
 
+router.post('/purchaseTicket', async (req, res) => {
+  const { ticketId, userId } = req.body;
+
+  try {
+    // Fetch ticket details from the database
+    const ticket = await Ticket.findById(ticketId);
+    const user = await User.findById(userId);
+    
+    // Create a Stripe Checkout Session
+    const session = await stripe.checkout.sessions.create({
+      payment_method_types: ['card'],
+      line_items: [{
+        price_data: {
+          currency: 'usd',
+          product_data: {
+            name: ticket.description,
+          },
+          unit_amount: ticket.price * 100, // amount in cents
+        },
+        quantity: 1,
+      }],
+      mode: 'payment',
+      success_url: `${process.env.CLIENT_URL}/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${process.env.CLIENT_URL}/cancel`,
+      metadata: {
+        userId: user._id.toString(),
+        ticketId: ticket._id.toString(),
+      },
+    });
+
+    res.json({ id: session.id });
+  } catch (err) {
+    console.error('Error creating checkout session:', err);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
 
 router.post('/postFeed/ticket', createTicket);
 
@@ -139,3 +177,111 @@ router.get('/postFeed/:postId', getSinglePost);
 //http://localhost:5000/ipa/v2/testing/postFeed/ticket
 module.exports = router;
 
+/*mobile app handling user payment route:
+import { StripeProvider, useStripe } from '@stripe/stripe-react-native';
+import { Button } from 'react-native';
+
+const PurchaseButton = ({ ticketId, userId }) => {
+  const { initPaymentSheet, presentPaymentSheet } = useStripe();
+
+  const handlePurchase = async () => {
+    try {
+      // Call your backend to create a checkout session
+      const response = await fetch('https://your-backend.com/api/create-checkout-session', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ ticketId, userId }),
+      });
+      const { id } = await response.json();
+
+      // Initialize the payment sheet
+      const { error } = await initPaymentSheet({
+        paymentIntentClientSecret: id,
+      });
+      if (error) {
+        console.error('Error initializing payment sheet:', error);
+        return;
+      }
+
+      // Present the payment sheet
+      const { error: paymentError } = await presentPaymentSheet();
+      if (paymentError) {
+        console.error('Error presenting payment sheet:', paymentError);
+        return;
+      }
+
+      // Handle successful payment
+      alert('Payment successful!');
+    } catch (error) {
+      console.error('Error during purchase:', error);
+      alert('Something went wrong during the purchase.');
+    }
+  };
+
+  return (
+    <Button title="Purchase" onPress={handlePurchase} />
+  );
+};
+
+// Wrap your app with StripeProvider in the root component
+const App = () => {
+  return (
+    <StripeProvider publishableKey="your-publishable-key">
+      { Your app components }
+      </StripeProvider>
+    );
+  }; */
+
+
+  /* if we wanna do a split of ticket fee between us and orgs
+  const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+
+exports.createCheckoutSession = async (req, res) => {
+  const { ticketId, userId } = req.body;
+
+  try {
+    // Fetch ticket details from the database
+    const ticket = await Ticket.findById(ticketId).populate('organization');
+    const user = await User.findById(userId);
+    const org = ticket.organization;
+    const stripeAccountId = org.stripeAccountId;
+
+    // Calculate application fee (20% of the ticket price)
+    const applicationFeeAmount = Math.round(ticket.price * 0.20 * 100); // amount in cents
+
+    // Create a Stripe Checkout Session
+    const session = await stripe.checkout.sessions.create({
+      payment_method_types: ['card'],
+      line_items: [{
+        price_data: {
+          currency: 'usd',
+          product_data: {
+            name: ticket.description,
+          },
+          unit_amount: ticket.price * 100, // amount in cents
+        },
+        quantity: 1,
+      }],
+      mode: 'payment',
+      success_url: `${process.env.CLIENT_URL}/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${process.env.CLIENT_URL}/cancel`,
+      metadata: {
+        userId: user._id.toString(),
+        ticketId: ticket._id.toString(),
+      },
+      payment_intent_data: {
+        application_fee_amount: applicationFeeAmount,
+        transfer_data: {
+          destination: stripeAccountId, // Specify the connected account ID here
+        },
+      },
+    });
+
+    res.json({ id: session.id });
+  } catch (err) {
+    console.error('Error creating checkout session:', err);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+};*/

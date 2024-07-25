@@ -86,7 +86,7 @@ const postFeedSchema = new Schema(
     // Event Type (Whether it is RSVP, Ticketing, or Regular)
     eventType:{
       type: String,
-      enum : ['RSVP', 'Ticketing', 'Regular'],
+      enum : ['Ticketing', 'Regular'],
       default: 'Regular'
     },
     ticketing: [{
