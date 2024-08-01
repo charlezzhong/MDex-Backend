@@ -22,7 +22,7 @@ var timezone = require('dayjs/plugin/timezone');
 const userForRsvp = require('../models/userForRsvp');
 const UserRSVP = require('../models/userRSVP');
 
-const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+
 dayjs.extend(utc)
 dayjs.extend(timezone)
 

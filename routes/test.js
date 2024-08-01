@@ -6,6 +6,8 @@ const { getOrganizationByEmail, createOrganization, updateOrganization, getAnaly
 const {createPost, createTicket, getPostSaves, getPostsWithPagination, getPostsByUser, getSinglePost, deletePost, updatePost, exploreScreen, getFilteredPost, getPostsByOrganization, getTotalPostsByOrganization} = require("../controllers/postFeed");
 const { route } = require('./organization');
 
+const{validate_qr, getTickets, getqrcode} = require('../controllers/transactionController');
+
 
 // Helper function to get the Stripe account ID from your database
 async function getStripeAccountId(organizationId) {
@@ -153,6 +155,46 @@ router.post('/purchaseTicket', async (req, res) => {
   }
 });
 
+router.post('/webhook', express.raw({ type: 'application/json' }), async (req, res) => {
+  const sig = req.headers['stripe-signature'];
+  let event;
+
+  try {
+    event = stripe.webhooks.constructEvent(req.body, sig, process.env.STRIPE_WEBHOOK_SECRET);
+  } catch (err) {
+    console.error('Webhook signature verification failed', err);
+    return res.status(400).send(`Webhook Error: ${err.message}`);
+  }
+
+  // Handle successful payment event
+  if (event.type === 'checkout.session.completed') {
+    const session = event.data.object;
+
+    try {
+      const { userId, ticketId, quantity } = session.metadata;
+      const qrCode = await generateQRCode(`ticketPurchaseId:${session.payment_intent}`);
+
+      // Create ticket purchase record
+      const ticketPurchase = new TicketPurchase({
+        user: userId,
+        ticket: ticketId,
+        stripeSessionId: session.id,
+        stripePaymentIntentId: session.payment_intent,
+        purchaseDate: new Date(),
+        quantity: parseInt(quantity),
+        qrCode: qrCode,
+        used: false,
+      });
+
+      await ticketPurchase.save();
+    } catch (error) {
+      console.error('Failed to create ticket purchase record', error);
+    }
+  }
+
+  res.json({ received: true });
+});
+
 
 router.post('/postFeed/ticket', createTicket);
 
@@ -175,7 +217,18 @@ router.get('/postFeed/:postId', getSinglePost);
 //router.post('/stripe/onboard', stripeRoutes);
 //router.post('/postFeed/ticket', );
 //http://localhost:5000/ipa/v2/testing/postFeed/ticket
+
+
+// the user tries to get all the tickets they have purchased
+router.get('/ticket-purchases/:userId', getTickets);
+// the user tries to get the qr code for a specific ticket
+router.get('/ticket-purchase/:id/qr-code', getqrcode);
+// the organization staff scans user's qr code to validate the ticket
+router.post('/validate-qr-code', validate_qr);
 module.exports = router;
+
+// mainly generate qr code
+// athlete ticket list
 
 /*mobile app handling user payment route:
 import { StripeProvider, useStripe } from '@stripe/stripe-react-native';
