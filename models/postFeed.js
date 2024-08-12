@@ -11,6 +11,9 @@ const postFeedSchema = new Schema(
       type: String,
       default: '',
     },
+    restaurantName: {
+      type: String,
+    },
     rsvp:  {
         type: Schema.Types.ObjectId,
         ref: 'Rsvp',
@@ -28,6 +31,10 @@ const postFeedSchema = new Schema(
     organization:  {
         type: Schema.Types.ObjectId,
         ref: 'Organization',
+    },
+    restaurant: {
+      type: Schema.Types.ObjectId,
+      ref: 'Restaurant',
     },
     title: {
       type: String,
@@ -86,7 +93,7 @@ const postFeedSchema = new Schema(
     // Event Type (Whether it is RSVP, Ticketing, or Regular)
     eventType:{
       type: String,
-      enum : ['Ticketing', 'Regular'],
+      enum : ['Ticketing', 'Regular', 'Deal'],
       default: 'Regular'
     },
     ticketing: [{

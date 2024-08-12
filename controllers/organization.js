@@ -9,6 +9,8 @@ const Institution = require("../models/institution");
 const PostFeed = require("../models/postFeed");
 const userPosts = require("../models/userPosts");
 const Office = require("../models/office");
+const Restaurant = require("../models/restaurant");
+const { statusValue } = require("../helpers/enums");
 
 
 /*
@@ -61,6 +63,109 @@ exports.getOrganizationByEmail = async (req, res) => {
     return response(500, err.message || "Internal Server Error", null, res);
   }
 };
+
+exports.find_restaurant_by_email = async (req, res) => {
+  let { email } = req.body;
+
+  if (!email) {
+    return res.json({
+      error: "Email is required",
+    });
+  }
+
+  try {
+    // Find the restaurant by orgEmail
+    const restaurant = await Restaurant.findOne({ orgEmail: email });
+    console.log("you find it or no?");
+
+    if (!restaurant) {
+      return res.json({
+        error: "Restaurant not found",
+      });
+    }
+    console.log("find!!!");
+
+    // Return the found restaurant
+    //res.status(201).json({ message: 'Organization found successfully', organization: restaurant });
+    return res.status(200).json({ 
+      message: "Organization found successfully", 
+      organization: { organization: restaurant }
+    });
+    /*return res.json({
+      success: true,
+      data: restaurant,
+    });*/
+  } catch (error) {
+    console.error("Error finding restaurant:", error);
+    return res.json({
+      error: "An error occurred while trying to find the restaurant",
+    });
+  }
+};
+
+exports.createRestaurant = async (req, res) => {
+  console.log(req.body);
+  try {
+    const {
+      name,
+      address,
+      postalCode,
+      city,
+      country,
+      phoneNumber,
+      storeType,
+      email,
+    } = req.body;
+
+    // Validate required fields
+    if (!name || !email) {
+      return res.status(400).json({ message: 'Name and email are required.' });
+    }
+    console.log("wiwiwi");
+    console.log(name);
+    console.log(email);
+
+    /*const existingRestaurant = await Restaurant.findOne({ orgEmail: email });
+    console.log(existingRestaurant);
+    if (existingRestaurant) {
+      return res.status(200).json({ message: 'Restaurant already exists.', data: null });
+    }*/
+
+    // Create a new restaurant object
+    const newRestaurant = new Restaurant({
+      orgName: name,
+      /*restAddress: {
+        address,
+        postalCode,
+        city,
+        country,
+      },*/
+      orgAddress: address,
+      orgPhone: phoneNumber,
+      //storeType,
+      orgEmail: email,
+      email: email,
+      status: statusValue.approved
+    });
+    console.log("create?")
+
+    // Save the new restaurant to the database
+    await newRestaurant.save();
+
+    // Respond with the created restaurant
+    //return res.status(201).json(newRestaurant);
+    //return response(200, "Success", { newRestaurant }, res);
+    res.status(201).json({ message: 'Organization created successfully', organization: newRestaurant });
+  } catch (error) {
+    if (error.code === 11000) { // Duplicate key error code
+      console.log("duplicate create");
+      return res.status(200).json({ message: 'Restaurant already exists.', data: null });
+    }
+    console.error('Error creating restaurant:', error);
+    return res.status(500).json({ message: 'Internal server error.' });
+  }
+};
+
 
 // Create organization
 // @route Post /api/organization/create
