@@ -531,7 +531,8 @@ exports.createRestaurantPost = async (req, res) => {
       website,
       instagram,
       eventTime,
-      eventEndTime: new Date(eventEndTime),
+      //eventEndTime: new Date(eventEndTime),
+      eventEndTime,
       eventLocation,
       eventLocationDescription,
       lat,
@@ -540,7 +541,8 @@ exports.createRestaurantPost = async (req, res) => {
       campus: isNorth ? 'north' : isCentral ? 'central' : 'all',
       restaurant: restaurant._id, // Reference to the restaurant
       restaurantName,
-      eventDate: new Date(eventDate), // Convert to Date object if necessary
+      //eventDate: new Date(eventDate), // Convert to Date object if necessary
+      eventDate,
       postedBy: null, // Assuming you handle postedBy elsewhere, maybe req.user?
       eventType: 'Regular', // Defaulting here, customize as needed
     });
