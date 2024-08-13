@@ -272,6 +272,66 @@ exports.createOrganization1 = async (req, res) => {
     res.status(400).json({ message: 'Error creating organization', error });
   }
 };
+
+exports.updateRestaurant = async (req, res) => {
+  let body = req.body;
+  const { orgId } = req.params;
+
+  if (!body) {
+    return response(400, "All fields are required", null, res);
+  }
+
+  let org = await Restaurant.findById(orgId).populate("office").exec();
+  if (req.pictures) {
+    let oldMedia = body?.media || [];
+    let media = [...oldMedia, ...req.pictures];
+    body.media = media;
+  }
+  if (!org) {
+    return response(404, "Invalid organization id provided", null, res);
+  }
+
+  //checking if the email already exist for the organization
+  if (body?.orgEmail) {
+    let isEmailExist = await Organization.findOne({ orgEmail: body?.orgEmail });
+    if (isEmailExist && isEmailExist._id == orgId) {
+      return response(400, "Email already in use", null, res);
+    }
+  }
+
+  //update an organization office info or create if not exist
+  if (body?.office) {
+    console.log(body?.office);
+    if (
+      body?.office?.officeBuilding ||
+      body?.office?.roomNumber ||
+      body?.office?.hours
+    ) {
+      if (org) {
+        if (!org.office) {
+          let officeData = await Office.create(body.office);
+          body.office = officeData?._id;
+        } else {
+          await Office.findOneAndUpdate({ _id: org.office }, body?.office, {
+            new: true,
+          });
+          delete body.office;
+          // body.office = officeData?._id
+        }
+      }
+    }
+  }
+
+  try {
+    const orgResponse = await Organization.findByIdAndUpdate(orgId, body, {
+      new: true,
+    }).populate("office");
+    return response(200, "Organization updated successfully", orgResponse, res);
+  } catch (error) {
+    let msg = error?.message || "Something went wrong";
+    return response(500, msg, error, res);
+  }
+};
 /*
 exports.updateOrganization = async (req, res) => {
   let body = req.body;
