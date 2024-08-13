@@ -1138,6 +1138,61 @@ exports.getPostsByOrganization = async (req, res) => {
   }
 };
 
+exports.getPostsByRestaurant = async (req, res) => {
+  try {
+    const { orgId } = req.params;
+    const { category, offset = 0, limit = 10 } = req.query; // Assuming the parameter is named "category"
+
+    let query = {};
+    let eventTypeQuery = {};
+    console.log("I'm here hehe");
+
+    // Determine the query based on the category
+    switch (category) {
+      case 'upcoming':
+        query = { eventDate: { $gte: dayjs().format('MM/DD/YYYY') } }; // Fetch upcoming events
+        break;
+      case 'past':
+        query = { eventDate: { $lt: dayjs().format('MM/DD/YYYY') } }; // Fetch past events
+        break;
+      case 'upcoming_rsvp':
+        query = { eventDate: { $gte: dayjs().format('MM/DD/YYYY') }, eventType: 'Regular', rsvp: { $exists: true } }; // Upcoming RSVP events
+        break;
+      case 'past_rsvp':
+        query = { eventDate: { $lt: dayjs().format('MM/DD/YYYY') }, eventType: 'Regular', rsvp: { $exists: true } }; // Past RSVP events
+        break;
+      case 'upcoming_ticket':
+        query = { eventDate: { $gte: dayjs().format('MM/DD/YYYY') }, eventType: 'Ticketing' }; // Upcoming Ticket events
+        break;
+      case 'past_ticket':
+        query = { eventDate: { $lt: dayjs().format('MM/DD/YYYY') }, eventType: 'Ticketing' }; // Past Ticket events
+        break;
+      default:
+        return res.status(400).json({ status: false, message: 'Invalid category' });
+    }
+
+    // Query for the posts
+    /*const posts = await PostFeed.find({ ...query, restaurantName: orgId })
+      .populate('organization', 'rsvp')
+      .limit(parseInt(limit))
+      .skip(parseInt(offset));*/
+    const posts = await PostFeed.find({ ...query, restaurantName: orgId })
+      .limit(parseInt(limit))
+      .skip(parseInt(offset));
+    
+    // Total count for pagination
+    const total = await PostFeed.countDocuments({ ...query, restaurantName: orgId });
+
+    res.json({ posts, total });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({
+      status: false,
+      message: err.message,
+    });
+  }
+};
+
 exports.getTotalPostsByOrganization = async (req, res) => {
   try {
     console.log('req.params: ', req.params);
@@ -1175,25 +1230,25 @@ exports.getTotalPostsByRestaurant = async (req, res) => {
       orgId
     } = req.body;*/
     const { orgId } = req.query;
-    console.log(orgId);
+    //console.log(orgId);
 
     // get the total number of posts for this org
     const totalPosts = await PostFeed.countDocuments({ restaurantName: orgId });
-    console.log("pass1?");
+    //console.log("pass1?");
 
     // get all the posts posted by this org
     const organizationPosts = await PostFeed.find({ restaurantName: orgId });
-    console.log("pass2?");
+    //console.log("pass2?");
 
     // Extract the IDs of these posts
     const postIds = organizationPosts.map(post => post._id);
-    console.log("pass3?");
+    //console.log("pass3?");
 
     // Count the total number of saves for these posts
     const totalSaves = await userPosts.countDocuments({ postId: { $in: postIds } });
-    console.log("pass4?");
-    console.log("totalPost: ", totalPosts);
-    console.log("totalSaves: ", totalSaves);
+    //console.log("pass4?");
+    //console.log("totalPost: ", totalPosts);
+    //console.log("totalSaves: ", totalSaves);
 
     res.json({ totalPosts, totalSaves });
   } catch (err) {
