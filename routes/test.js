@@ -3,7 +3,7 @@ const router = express.Router();
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const Organization = require('../models/organization');
 const { getOrganizationByEmail, createOrganization, updateOrganization, getAnalytics, createRestaurant, find_restaurant_by_email } = require('../controllers/organization');
-const {createPost, createTicket, getPostSaves, getPostsWithPagination, getPostsByUser, getSinglePost, deletePost, updatePost, exploreScreen, getFilteredPost, getPostsByOrganization, getTotalPostsByOrganization} = require("../controllers/postFeed");
+const {createPost, createTicket, getPostSaves, getPostsWithPagination, getPostsByUser, getSinglePost, deletePost, updatePost, exploreScreen, getFilteredPost, getPostsByOrganization, getTotalPostsByOrganization, getTotalPostsByRestaurant, createRestaurantPost} = require("../controllers/postFeed");
 const { route } = require('./organization');
 
 const{validate_qr, getTickets, getqrcode} = require('../controllers/transactionController');
@@ -227,6 +227,8 @@ router.get('/ticket-purchase/:id/qr-code', getqrcode);
 router.post('/validate-qr-code', validate_qr);
 router.post('/create_restaurant', createRestaurant);
 router.post('/find_restaurant_by_email', find_restaurant_by_email);
+router.get('/totalPosts/getRest', getTotalPostsByRestaurant);
+router.post('/post/restaurant', createRestaurantPost);
 module.exports = router;
 
 // mainly generate qr code

@@ -7,6 +7,7 @@ const RsvpSchema = require('../models/rsvp');
 const userPosts = require('../models/userPosts');
 const Ticket = require('../models/ticket');
 const Organization = require('../models/organization');
+const Restaurant = require('../models/restaurant');
 
 const fs = require('fs');
 const path = require('path');
@@ -477,6 +478,83 @@ exports.createPost = async (req, res) => {
       status: false,
       message: err.message,
     });
+  }
+};
+
+exports.createRestaurantPost = async (req, res) => {
+  try {
+    console.log("are you here?");
+    //const { restaurantEmail, ...postData } = req.body;
+    const {
+      title,
+      link,
+      description,
+      website,
+      instagram,
+      eventTime,
+      eventEndTime,
+      eventLocation,
+      eventLocationDescription,
+      lat,
+      lng,
+      category,
+      //campus: isNorth ? 'north' : isCentral ? 'central' : 'all',
+      restaurantEmail,
+      restaurantName,
+      eventDate,
+      isNorth,
+      isCentral,
+      rsvpData,
+    } = req.body;
+    console.log("restaurant email: ", restaurantEmail);
+    //console.log("postdata: ", postData);
+
+    // Find the restaurant by email
+    const restaurant = await Restaurant.findOne({ orgEmail: restaurantEmail });
+
+    if (!restaurant) {
+      console.log("restaurant not found!");
+      return res.status(404).json({ error: 'Restaurant not found' });
+    }
+
+    console.log("restaurant found!");
+    console.log("this is the restaurant found: ", restaurant);
+    // Create the new post referencing the restaurant
+    /*const newPost = new PostFeed({
+      ...postData,
+      restaurant: restaurant._id, // Reference to the restaurant
+    });*/
+    const newPost = new PostFeed({
+      title,
+      link,
+      description,
+      website,
+      instagram,
+      eventTime,
+      eventEndTime: new Date(eventEndTime),
+      eventLocation,
+      eventLocationDescription,
+      lat,
+      lng,
+      category,
+      campus: isNorth ? 'north' : isCentral ? 'central' : 'all',
+      restaurant: restaurant._id, // Reference to the restaurant
+      restaurantName,
+      eventDate: new Date(eventDate), // Convert to Date object if necessary
+      postedBy: null, // Assuming you handle postedBy elsewhere, maybe req.user?
+      eventType: 'Regular', // Defaulting here, customize as needed
+    });
+
+    await newPost.validate();
+
+    // Save the new post
+    await newPost.save();
+
+
+    res.status(201).json({ message: 'Post created successfully', post: newPost });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ error: 'Server error', details: error.message });
   }
 };
 
@@ -1076,6 +1154,46 @@ exports.getTotalPostsByOrganization = async (req, res) => {
 
     // Count the total number of saves for these posts
     const totalSaves = await userPosts.countDocuments({ postId: { $in: postIds } });
+
+    res.json({ totalPosts, totalSaves });
+  } catch (err) {
+    console.log(err);
+
+    return res.status(500).json({
+      status: false,
+      message: err.message,
+    });
+  }
+};
+
+exports.getTotalPostsByRestaurant = async (req, res) => {
+  try {
+    //console.log('req.params: ', req.params);
+    //const { orgId } = req.params;
+    console.log("testing!");
+    /*let {
+      orgId
+    } = req.body;*/
+    const { orgId } = req.query;
+    console.log(orgId);
+
+    // get the total number of posts for this org
+    const totalPosts = await PostFeed.countDocuments({ restaurantName: orgId });
+    console.log("pass1?");
+
+    // get all the posts posted by this org
+    const organizationPosts = await PostFeed.find({ restaurantName: orgId });
+    console.log("pass2?");
+
+    // Extract the IDs of these posts
+    const postIds = organizationPosts.map(post => post._id);
+    console.log("pass3?");
+
+    // Count the total number of saves for these posts
+    const totalSaves = await userPosts.countDocuments({ postId: { $in: postIds } });
+    console.log("pass4?");
+    console.log("totalPost: ", totalPosts);
+    console.log("totalSaves: ", totalSaves);
 
     res.json({ totalPosts, totalSaves });
   } catch (err) {
