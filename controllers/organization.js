@@ -115,6 +115,8 @@ exports.createRestaurant = async (req, res) => {
       phoneNumber,
       storeType,
       email,
+      lat,
+      lng
     } = req.body;
 
     // Validate required fields
@@ -145,7 +147,9 @@ exports.createRestaurant = async (req, res) => {
       //storeType,
       orgEmail: email,
       email: email,
-      status: statusValue.approved
+      status: statusValue.approved,
+      lat,
+      lng
     });
     console.log("create?")
 

@@ -225,6 +225,7 @@ router.get('/ticket-purchases/:userId', getTickets);
 router.get('/ticket-purchase/:id/qr-code', getqrcode);
 // the organization staff scans user's qr code to validate the ticket
 router.post('/validate-qr-code', validate_qr);
+
 router.post('/create_restaurant', createRestaurant);
 router.post('/find_restaurant_by_email', find_restaurant_by_email);
 router.get('/totalPosts/getRest', getTotalPostsByRestaurant);

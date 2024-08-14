@@ -13,7 +13,7 @@ const reportSchema = new Schema(
         Number,
         required: true
     },
-    lon: {
+    lng: {
         Number,
         required: true
     },

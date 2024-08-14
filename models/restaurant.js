@@ -61,6 +61,14 @@ const restSchema = new Schema(
       type: String, 
       required:false
     },
+    lat: {
+      type: String, 
+      //required: true
+  },
+    lng: {
+      type: String, 
+        //required: true
+    },
     office: {
       type: Schema.Types.ObjectId,
       ref: 'Office', 
